@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猪猪进化记</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 600,
+            height: 800,
+            backgroundColor: '#ffdf9e',
+            physics: {
+                default: 'arcade',
+                arcade: { debug: false }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        let game = new Phaser.Game(config);
+        let pigs = [];
+        let selectedPig = null;
+        let coins = 0;
+        let scoreText;
+
+        function preload() {
+            this.load.image('background', 'https://i.imgur.com/q5D5HSp.jpg'); 
+            this.load.image('pig1', 'https://i.imgur.com/Y7R5K2X.png');
+            this.load.image('pig2', 'https://i.imgur.com/JjXclFy.png');
+            this.load.image('pig3', 'https://i.imgur.com/5JlNYQh.png');
+        }
+
+        function create() {
+            this.add.image(300, 400, 'background').setScale(1.2);
+
+            scoreText = this.add.text(20, 20, '金币: 0', { fontSize: '32px', fill: '#fff' });
+
+            for (let i = 0; i < 5; i++) {
+                spawnPig(this, Phaser.Math.Between(50, 550), Phaser.Math.Between(100, 700), 0);
+            }
+
+            this.input.on('pointerdown', function (pointer) {
+                selectedPig = pigs.find(pig => pig.getBounds().contains(pointer.x, pointer.y));
+            });
+
+            this.input.on('pointermove', function (pointer) {
+                if (selectedPig) {
+                    selectedPig.x = pointer.x;
+                    selectedPig.y = pointer.y;
+                }
+            });
+
+            this.input.on('pointerup', function () {
+                if (selectedPig) {
+                    checkMerge(selectedPig);
+                    selectedPig = null;
+                }
+            });
+        }
+
+        function update() {}
+
+        function spawnPig(scene, x, y, level) {
+            let pigSprites = ['pig1', 'pig2', 'pig3'];
+            let pig = scene.add.sprite(x, y, pigSprites[level]).setScale(0.4).setInteractive();
+            pig.level = level;
+            pigs.push(pig);
+        }
+
+        function checkMerge(pig) {
+            let merged = false;
+            pigs.forEach(otherPig => {
+                if (otherPig !== pig && otherPig.level === pig.level && Phaser.Geom.Intersects.RectangleToRectangle(pig.getBounds(), otherPig.getBounds())) {
+                    let newLevel = pig.level + 1;
+                    if (newLevel < 3) {
+                        spawnPig(pig.scene, pig.x, pig.y, newLevel);
+                        coins += 10 * (newLevel + 1);
+                        scoreText.setText('金币: ' + coins);
+                    }
+                    pig.destroy();
+                    otherPig.destroy();
+                    pigs = pigs.filter(p => p !== pig && p !== otherPig);
+                    merged = true;
+                }
+            });
+
+            if (!merged) {
+                pigs.push(pig);
+            }
+        }
+    </script>
+</body>
+</html>
